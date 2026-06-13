@@ -109,21 +109,6 @@ cd damaga-project-*
 npm install
 ```
 
-### Setup Environment
-
-Buat file `.env`
-
-```env
-PORT=3000
-
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=damaga
-
-JWT_SECRET=your_secret_key
-```
-
 ### Jalankan Project
 
 ```bash
