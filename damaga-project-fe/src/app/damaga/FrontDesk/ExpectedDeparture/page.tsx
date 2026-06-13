@@ -1,0 +1,783 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Search, User, RefreshCw, Calendar } from "lucide-react";
+
+export default function ExpectedDeparturePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ExpectedDeparture />
+    </Suspense>
+  );
+}
+
+interface ReservationBooking {
+  _id: string;
+  FirstName: string;
+  LastName: string;
+  Address: string;
+  Country: string;
+  Phone: number;
+  RoomType: string;
+  RoomNumber?: string;
+  ArrDate: string;
+  DeptDate: string;
+  ArrTime: string;
+  DeptTime: string;
+  TypeOfGuest: string;
+  City: string;
+  ZipCode: number;
+  RoomRate: number;
+  RoomRateCurrency?: string;
+  NoOfPerson: number;
+  Payment: string;
+  ReservationMadeBy: string;
+  Clerk: string;
+  Request?: string;
+  Fax?: string;
+  IDNumber?: string;
+  DateOfIssue?: string;
+  Source?: string;
+  Note?: string;
+  status?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  AdvanceDeposit?: number;
+  CompanyName?: string;
+  CompanyPhone?: string;
+  CompanyAddress?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function ExpectedDeparture() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchState, setSearchState] = useState({
+    FirstName: "",
+    LastName: "",
+    ArrDate: "",
+    DeptDate: "",
+    RoomNumber: "",
+    RoomType: "",
+    Phone: "",
+    NoOfPerson: "",
+    RoomRate: "",
+    IDNumber: "",
+    Address: "",
+    Country: "",
+    DateOfIssue: "",
+    ArrTime: "",
+    DeptTime: "",
+    Source: "",
+    Note: "",
+  });
+
+  const [reservationData, setReservationData] = useState<ReservationBooking[]>([]);
+  const [allData, setAllData] = useState<ReservationBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isClient, setIsClient] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+
+  // Get today's date in YYYY-MM-DD format
+  const getTodayString = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  // Fungsi untuk normalize tanggal ke format YYYY-MM-DD
+  const normalizeDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    setSelectedDate("");
+    fetchAllData();
+
+    const interval = setInterval(() => {
+      fetchAllData();
+      setLastUpdate(new Date());
+    }, 50000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    const shouldRefresh = searchParams.get("refresh");
+    if (shouldRefresh === "true") {
+      fetchAllData();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (allData.length > 0) {
+      filterByDate(selectedDate);
+    }
+  }, [selectedDate, allData]);
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/book-a-room?t=${Date.now()}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        }
+      );
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      const data = await res.json();
+      const bookings: ReservationBooking[] = Array.isArray(data)
+        ? data
+        : data.bookings || [];
+
+      console.log("📊 Total bookings fetched:", bookings.length);
+
+      // PERUBAHAN: Hanya filter tamu yang memang sudah check-in/in-house/stay-over
+      const validDepartures = bookings.filter((b) => {
+        const statusLower = (b.status || "").toLowerCase();
+        return ["checked-in", "in-house", "stay-over"].includes(statusLower);
+      });
+
+      console.log("✅ Valid departures (not checked-out/cancelled):", validDepartures.length);
+
+      setAllData(validDepartures);
+    } catch (err: unknown) {
+      console.error("Fetch error:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error occurred";
+      alert(`Gagal memuat data: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterByDate = (dateString: string) => {
+    if (!dateString) {
+      setReservationData(allData);
+      return;
+    }
+
+    console.log("🔍 Filtering by date:", dateString);
+
+    const filtered = allData.filter((reservation) => {
+      // PERBAIKAN: Gunakan normalizeDate untuk memastikan format konsisten
+      const deptDate = normalizeDate(reservation.DeptDate);
+      const match = deptDate === dateString;
+      
+      if (match) {
+        console.log(`✅ Match found: ${reservation.FirstName} ${reservation.LastName} - Dept: ${deptDate}`);
+      }
+      
+      return match;
+    });
+
+    console.log(`📋 Filtered results: ${filtered.length} departures on ${dateString}`);
+    setReservationData(filtered);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchState({ ...searchState, [e.target.name]: e.target.value });
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
+  };
+
+  const handleSearch = () => {
+    setLoading(true);
+    try {
+      let filtered = allData;
+
+      // First filter by selected date
+      if (selectedDate) {
+        filtered = filtered.filter((reservation) => {
+          const deptDate = normalizeDate(reservation.DeptDate);
+          return deptDate === selectedDate;
+        });
+      }
+
+      // Then apply other filters
+      filtered = filtered.filter((reservation) => {
+        const matchesField = (
+          reservationValue: string | number,
+          searchValue: string
+        ) => {
+          if (!searchValue) return true;
+          return String(reservationValue)
+            .toLowerCase()
+            .includes(searchValue.toLowerCase());
+        };
+
+        const matchesFirstName = matchesField(
+          reservation.FirstName || "",
+          searchState.FirstName
+        );
+        const matchesLastName = matchesField(
+          reservation.LastName || "",
+          searchState.LastName
+        );
+        const matchesRoomNumber = matchesField(
+          reservation.RoomNumber || "",
+          searchState.RoomNumber
+        );
+        const matchesRoomType = matchesField(
+          reservation.RoomType || "",
+          searchState.RoomType
+        );
+        const matchesCountry = matchesField(
+          reservation.Country || "",
+          searchState.Country
+        );
+        const matchesIDNumber = matchesField(
+          reservation.IDNumber || "",
+          searchState.IDNumber
+        );
+
+        let matchesArrDate = true;
+        if (searchState.ArrDate) {
+          matchesArrDate = normalizeDate(reservation.ArrDate) === searchState.ArrDate;
+        }
+
+        const matchesStatus =
+          statusFilter === "all" || reservation.status === statusFilter;
+
+        return (
+          matchesFirstName &&
+          matchesLastName &&
+          matchesArrDate &&
+          matchesRoomNumber &&
+          matchesRoomType &&
+          matchesCountry &&
+          matchesIDNumber &&
+          matchesStatus
+        );
+      });
+
+      setReservationData(filtered);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan pencarian");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setSearchState({
+      FirstName: "",
+      LastName: "",
+      ArrDate: "",
+      DeptDate: "",
+      RoomNumber: "",
+      RoomType: "",
+      Phone: "",
+      NoOfPerson: "",
+      RoomRate: "",
+      IDNumber: "",
+      Address: "",
+      Country: "",
+      DateOfIssue: "",
+      ArrTime: "",
+      DeptTime: "",
+      Source: "",
+      Note: "",
+    });
+    setStatusFilter("all");
+    setSelectedDate(getTodayString());
+  };
+
+  const handleSetToday = () => {
+    setSelectedDate(getTodayString());
+  };
+
+  const handleViewDetails = (bookingId: string) => {
+    router.push(`../FrontDesk/InHouseGuest?bookingId=${bookingId}`);
+  };
+
+  const handleCheckOut = async (bookingId: string) => {
+    try {
+      const confirmCheckOut = confirm(
+        "Apakah Anda yakin ingin melakukan CHECK-OUT untuk tamu ini?\n\nTamu akan dipindahkan dari Expected Departure dan status menjadi Checked-Out."
+      );
+
+      if (!confirmCheckOut) return;
+
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/book-a-room/${bookingId}`;
+
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          status: "checked-out",
+          checkOutDate: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update status: ${response.status}`);
+      }
+
+      alert(
+        "✅ Tamu berhasil di-check-out!\n\nData akan dipindahkan dari Expected Departure dan tercatat sebagai Checked-Out di history."
+      );
+
+      fetchAllData();
+    } catch (error) {
+      alert(
+        `❌ Gagal melakukan check-out!\n\nError: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }\n\nSilakan coba lagi atau hubungi administrator.`
+      );
+    }
+  };
+
+  const getStatusBadge = (status?: string) => {
+    const statusLower = (status || "pending").toLowerCase();
+
+    const statusConfig: Record<string, { bg: string; text: string }> = {
+      pending: { bg: "bg-yellow-100", text: "text-yellow-800" },
+      confirmed: { bg: "bg-blue-100", text: "text-blue-800" },
+      "checked-in": { bg: "bg-green-100", text: "text-green-800" },
+      "checked-out": { bg: "bg-purple-100", text: "text-purple-800" },
+      cancelled: { bg: "bg-red-100", text: "text-red-800" },
+      "in-house": { bg: "bg-teal-100", text: "text-teal-800" },
+      "stay-over": { bg: "bg-indigo-100", text: "text-indigo-800" },
+    };
+
+    const config = statusConfig[statusLower] || {
+      bg: "bg-gray-100",
+      text: "text-gray-800",
+    };
+
+    return (
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
+      >
+        {status || "pending"}
+      </span>
+    );
+  };
+
+  const formatRoomRate = (rate: number, currency?: string) => {
+    const curr = currency || "USD";
+    const symbol = curr === "USD" ? "$" : "Rp";
+    const formattedRate = rate.toLocaleString("en-US", {
+      minimumFractionDigits: curr === "USD" ? 2 : 0,
+      maximumFractionDigits: curr === "USD" ? 2 : 0,
+    });
+    return `${symbol} ${formattedRate}`;
+  };
+
+  const formatAdvanceDeposit = (deposit?: number, currency?: string) => {
+    if (!deposit || deposit === 0) return "-";
+    const curr = currency || "USD";
+    const symbol = curr === "USD" ? "$" : "Rp";
+    const formattedDeposit = deposit.toLocaleString("en-US", {
+      minimumFractionDigits: curr === "USD" ? 2 : 0,
+      maximumFractionDigits: curr === "USD" ? 2 : 0,
+    });
+    return `${symbol} ${formattedDeposit}`;
+  };
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-7xl mx-auto">
+        <div className="bg-white p-6 sm:p-8 lg:p-10 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-sky-500">
+              Expected Departure
+            </h2>
+            <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-orange-800">
+                Today`s Departures
+              </span>
+            </div>
+          </div>
+
+          {/* Date Selector */}
+          <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 p-5 rounded-lg border border-orange-200">
+            <Label className="text-sm font-medium mb-3 block text-orange-700">
+              <Calendar className="w-4 h-4 inline mr-2" />
+              Select Departure Date
+            </Label>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1 max-w-xs">
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  className="w-full h-10 text-base"
+                />
+              </div>
+              <Button
+                onClick={handleSetToday}
+                variant="outline"
+                className="h-10 px-4"
+              >
+                Today
+              </Button>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Currently showing departures for:{" "}
+              <span className="font-semibold text-orange-600">
+                {selectedDate
+                  ? new Date(selectedDate + "T00:00:00").toLocaleDateString("id-ID", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "All dates"}
+              </span>
+            </p>
+          </div>
+
+          <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <p className="text-sm text-orange-700">
+              <strong>ℹ️ Info:</strong> Halaman ini menampilkan guest yang{" "}
+              <span className="font-semibold">AKAN DEPARTURE</span> pada tanggal yang dipilih.
+              Guest akan otomatis muncul berdasarkan <span className="font-semibold">Departure Date</span>{" "}
+              tanpa perlu check-in terlebih dahulu.
+            </p>
+          </div>
+
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-sky-50 px-4 py-3 rounded-lg border border-sky-200 gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-gray-600">
+                Auto-refresh aktif (setiap 50 detik)
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {isClient && (
+                <span className="text-xs text-gray-500">
+                  Last update: {lastUpdate.toLocaleTimeString("id-ID")}
+                </span>
+              )}
+
+              <Button
+                onClick={fetchAllData}
+                variant="outline"
+                size="sm"
+                className="h-8 px-3"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" /> Refresh Now
+              </Button>
+            </div>
+          </div>
+
+          {/* Status Filter */}
+          <div className="mb-6 bg-gradient-to-r from-sky-50 to-blue-50 p-4 rounded-lg border border-sky-200">
+            <Label className="text-sm font-medium mb-3 block text-sky-700">
+              Filter by Status
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                {
+                  value: "all",
+                  label: "All Departures",
+                  color: "bg-gray-100 hover:bg-gray-200",
+                },
+                {
+                  value: "pending",
+                  label: "Pending",
+                  color: "bg-yellow-100 hover:bg-yellow-200 text-yellow-800",
+                },
+                {
+                  value: "confirmed",
+                  label: "Confirmed",
+                  color: "bg-blue-100 hover:bg-blue-200 text-blue-800",
+                },
+                {
+                  value: "checked-in",
+                  label: "Checked In",
+                  color: "bg-green-100 hover:bg-green-200 text-green-800",
+                },
+                {
+                  value: "in-house",
+                  label: "In-House",
+                  color: "bg-teal-100 hover:bg-teal-200 text-teal-800",
+                },
+              ].map((status) => (
+                <button
+                  key={status.value}
+                  onClick={() => {
+                    setStatusFilter(status.value);
+                    setTimeout(handleSearch, 100);
+                  }}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    status.color
+                  } ${
+                    statusFilter === status.value
+                      ? "ring-2 ring-sky-500 shadow-md scale-105"
+                      : "opacity-70"
+                  }`}
+                >
+                  {status.label}
+                  {statusFilter === status.value && " ✓"}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Currently showing:{" "}
+              <span className="font-semibold text-sky-600">
+                {statusFilter === "all"
+                  ? "All Departures"
+                  : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+              </span>
+            </p>
+          </div>
+
+          {/* Search Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-6">
+            {Object.entries({
+              FirstName: "First Name",
+              LastName: "Last Name",
+              ArrDate: "Arrival Date",
+              RoomNumber: "Room Number",
+              RoomType: "Room Type",
+              Phone: "Phone",
+              NoOfPerson: "Number of Person",
+              RoomRate: "Room Rate",
+              IDNumber: "ID Number",
+              Address: "Address",
+              Country: "Nationality",
+              DateOfIssue: "Date of Issue",
+              ArrTime: "Arrival Time",
+              DeptTime: "Departure Time",
+              Source: "Source",
+              Note: "Request",
+            }).map(([key, label]) => (
+              <div key={key} className="w-full">
+                <Label className="text-sm font-medium mb-2 block text-sky-500">
+                  {label}
+                </Label>
+                <Input
+                  name={key}
+                  type={
+                    key.includes("Date")
+                      ? "date"
+                      : key.includes("Time")
+                      ? "time"
+                      : "text"
+                  }
+                  value={
+                    searchState[key as keyof typeof searchState] !== undefined
+                      ? searchState[key as keyof typeof searchState]
+                      : ""
+                  }
+                  onChange={handleChange}
+                  placeholder={`Enter ${label.toLowerCase()}`}
+                  className="w-full h-10"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-3 justify-end mb-8 pb-6 border-b">
+            <Button
+              onClick={handleClear}
+              variant="outline"
+              className="px-6 h-10 text-base font-medium"
+            >
+              Clear
+            </Button>
+            <Button
+              onClick={handleSearch}
+              disabled={loading}
+              className="px-8 h-10 text-base font-medium bg-sky-600 hover:bg-sky-700 text-white"
+            >
+              <Search className="w-4 h-4 mr-2" />
+              {loading ? "Searching..." : "Search"}
+            </Button>
+          </div>
+
+          {/* Table Result */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800">
+              Expected Departure Records ({reservationData.length})
+            </h3>
+
+            {loading ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed">
+                <div className="w-12 h-12 mx-auto mb-3 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-500">Loading departure data...</p>
+              </div>
+            ) : reservationData.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed">
+                <User className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                <p className="text-gray-500">No expected departures found for this date.</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Guest dengan departure date pada tanggal ini akan muncul otomatis.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full min-w-max">
+                  <thead className="bg-sky-50 border-b">
+                    <tr>
+                      {[
+                        "No",
+                        "First Name",
+                        "Last Name",
+                        "Arr. Date",
+                        "Dept. Date",
+                        "Room Number",
+                        "Room Type",
+                        "Phone",
+                        "Person",
+                        "Room Rate",
+                        "ID Number",
+                        "Address",
+                        "Nationality",
+                        "Date of Issue",
+                        "Arr. Time",
+                        "Dept. Time",
+                        "Status",
+                        "Advance Deposit",
+                        "Source",
+                        "Note",
+                      ].map((head) => (
+                        <th
+                          key={head}
+                          className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider"
+                        >
+                          {head}
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {reservationData.map((r, i) => {
+                      const statusLower = (r.status || "").toLowerCase();
+                      const canCheckOut = statusLower !== "checked-out" && statusLower !== "cancelled";
+
+                      return (
+                        <tr
+                          key={r._id}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-sm">{i + 1}</td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {r.FirstName}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {r.LastName}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {new Date(r.ArrDate).toLocaleDateString("id-ID")}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-orange-600">
+                            {new Date(r.DeptDate).toLocaleDateString("id-ID")}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold">
+                            {r.RoomNumber || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{r.RoomType}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.Phone || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.NoOfPerson || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {formatRoomRate(r.RoomRate, r.RoomRateCurrency)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.IDNumber || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{r.Address}</td>
+                          <td className="px-4 py-3 text-sm">{r.Country}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.DateOfIssue
+                              ? new Date(r.DateOfIssue).toLocaleDateString(
+                                  "id-ID"
+                                )
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.ArrTime || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.DeptTime || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {getStatusBadge(r.status)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {formatAdvanceDeposit(
+                              r.AdvanceDeposit,
+                              r.RoomRateCurrency
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {r.Source || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm max-w-xs truncate">
+                            {r.Note || "-"}
+                          </td>
+
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleViewDetails(r._id)}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 whitespace-nowrap"
+                              >
+                                View Details
+                              </Button>
+                              <Button
+                                onClick={() => handleCheckOut(r._id)}
+                                size="sm"
+                                disabled={!canCheckOut}
+                                className={`text-xs px-3 py-1 whitespace-nowrap ${
+                                  canCheckOut
+                                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                                    : "bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300"
+                                }`}
+                              >
+                                {canCheckOut ? "Check Out" : "Already Out"}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
