@@ -1,49 +1,189 @@
-Damaga Hotel Reservation
+# Damaga
 
-Sistem reservasi hotel berbasis web yang dibuat untuk membantu pelaksanaan ujian praktik di sekolah agar proses pencatatan reservasi menjadi lebih cepat, terstruktur, dan mengurangi penggunaan kertas.
+> Platform ujian praktik berbasis web untuk membantu sekolah melaksanakan ujian dengan lebih cepat, efisien, dan hemat biaya.
 
-Latar Belakang
+## 📖 Tentang Project
 
-Pada pelaksanaan ujian praktik perhotelan, proses reservasi sering dilakukan secara manual menggunakan formulir dan dokumen fisik. Hal ini dapat menyebabkan proses administrasi menjadi lebih lambat, kurang efisien, dan membutuhkan banyak kertas.
+Damaga adalah aplikasi fullstack yang dirancang untuk mendigitalisasi proses ujian praktik di sekolah.
 
-Damaga Hotel Reservation dikembangkan sebagai solusi digital untuk membantu siswa dan penguji melakukan simulasi proses reservasi hotel secara lebih sederhana dan modern.
+Banyak sekolah masih menggunakan metode manual yang memerlukan banyak kertas, waktu koreksi yang lama, serta proses administrasi yang kurang efisien. Damaga hadir sebagai solusi untuk membantu sekolah mengelola ujian praktik secara digital sehingga proses pelaksanaan menjadi lebih cepat, terstruktur, dan mudah dipantau.
 
-Fitur Utama
+### Manfaat Utama
 
-* Pencatatan data reservasi tamu
-* Manajemen data pelanggan
-* Pengelolaan kamar hotel
-* Monitoring status reservasi
-* Dashboard administrasi
-* Proses reservasi yang lebih cepat dan terorganisir
+- 📄 Mengurangi penggunaan kertas
+- ⏱️ Menghemat waktu pelaksanaan ujian
+- 📊 Mempermudah pengelolaan nilai
+- 🗂️ Data tersimpan secara terpusat
+- 🔍 Monitoring peserta dan hasil ujian secara real-time
+- 💰 Mengurangi biaya operasional sekolah
 
-Tujuan Proyek
+---
 
-* Mengurangi penggunaan dokumen fisik saat ujian praktik
-* Mempercepat proses administrasi reservasi
-* Memberikan pengalaman penggunaan sistem reservasi yang lebih realistis
-* Membantu siswa memahami alur kerja reservasi hotel berbasis digital
+## ✨ Fitur
 
-Tech Stack
+### Untuk Siswa
 
-Frontend
+- Login akun siswa
+- Mengikuti ujian praktik secara online
+- Mengunggah hasil tugas atau praktik
+- Melihat status pengerjaan
+- Melihat hasil penilaian
 
-* React
-* TypeScript
-* Tailwind CSS
+### Untuk Guru
 
-Backend
+- Membuat ujian praktik
+- Mengelola soal dan instruksi ujian
+- Menilai hasil pekerjaan siswa
+- Memberikan feedback
+- Mengelola data peserta ujian
 
-* Node.js
-* Express.js
-* PostgreSQL
+### Untuk Admin
 
-Struktur Proyek
+- Mengelola akun pengguna
+- Mengelola data kelas
+- Mengelola data siswa dan guru
+- Monitoring seluruh aktivitas sistem
+- Manajemen ujian sekolah
 
-damaga-reservation-hotel
-├── damaga-project-fe
-└── damaga-project-be
+---
 
-Catatan
+## 🏗️ Arsitektur Sistem
 
-Proyek ini dikembangkan sebagai bagian dari kebutuhan pembelajaran dan ujian praktik sekolah, dengan fokus pada efisiensi proses reservasi hotel dan digitalisasi administrasi.
+```text
+Siswa
+   │
+   ▼
+Frontend (Web App)
+   │
+   ▼
+Backend API
+   │
+   ▼
+Database
+```
+
+---
+
+## 🚀 Teknologi
+
+### Frontend
+
+- TailwindCSS
+- TypeScript
+- Next.js
+- ShadcnUI
+
+### Backend
+
+- Node.js
+- Express.js
+  
+
+### Database
+
+- MongoDB
+
+### Authentication
+
+- JWT Authentication
+
+---
+
+## ⚙️ Instalasi
+
+### Clone Repository
+
+```bash
+git clone https://github.com/username/damaga.git
+```
+
+### Masuk ke Folder Project
+
+```bash
+cd damaga-project-*
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Setup Environment
+
+Buat file `.env`
+
+```env
+PORT=3000
+
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=damaga
+
+JWT_SECRET=your_secret_key
+```
+
+### Jalankan Project
+
+```bash
+npm run dev
+```
+
+---
+
+## 📂 Struktur Folder
+
+```text
+damaga/
+│
+├── damaga-project-fe/
+│   ├── src/
+│   ├── public/
+│   └── ...
+│
+├── damaga-project-be/
+│   ├── src/│
+└── README.md
+```
+
+---
+
+## 🎯 Tujuan Project
+
+Damaga dikembangkan untuk membantu sekolah melakukan transformasi digital dalam pelaksanaan ujian praktik sehingga proses administrasi menjadi lebih efektif, transparan, dan efisien.
+
+Dengan sistem yang terintegrasi, sekolah dapat mengurangi penggunaan kertas, mempercepat proses penilaian, serta meningkatkan kualitas pengelolaan data ujian.
+
+---
+
+## 🛣️ Roadmap
+
+- [x] Authentication
+- [x] Dashboard Admin
+- [x] Dashboard Guru
+- [x] Dashboard Siswa
+- [x] Export PDF
+- [x] Analytics Dashboard
+- [x] Mobile Version
+
+---
+
+## 🤝 Kontribusi
+
+Kontribusi, saran, dan masukan sangat terbuka untuk pengembangan project ini.
+
+1. Fork repository
+2. Buat branch baru
+3. Commit perubahan
+4. Push ke branch
+5. Buat Pull Request
+
+---
+
+
+## 👨‍💻 Developer
+
+Dikembangkan oleh **Rakha arkana**.
+
+Jika project ini bermanfaat, jangan lupa berikan ⭐ pada repository ini.
